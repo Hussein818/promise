@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Title of the document</title>
+    <style media="screen">
+
+    div {
+        border: 1px solid;
+        padding: 5px;
+        margin: 10px;
+    }
+    span {
+        padding: 5px;
+    }
+
+    </style>
+</head>
+
+<body>
+    <main>
+
+        <!--  Loading -->
+        <section class="loading">
+            <div>
+                Loading...
+            </div>
+        </section>
+        <!--  Loading End -->
+
+        <!--  Content End -->
+        <section>
+            <header>
+                <h1>User data</h1>
+            </header>
+            <article>
+            </article>
+        </section>
+        <!--  Content End -->
+    </main>
+</body>
+
+
+<script>
+    "use strict";
+
+    const globarVars = {
+        baseApi: 'https://jsonplaceholder.typicode.com/',
+        userApi: 'users',
+        photosApi: 'photos',
+        postApi: 'posts',
+        fetchConfig: {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        }
+    };
+    let promise, fetch;
+
+    browserSupport()
+    fetchDataUpdateDom();
+
+    function browserSupport() {
+        promise = window.Promise;
+        fetch = window.fetch;
+
+        const errorMessage = !promise && !fetch ? 'Promise & Fetch are' :
+        !promise ? 'Promise ' :
+        !fetch ? 'Fetch' : null;
+
+        // TODO: add polyfil herrr..
+        if (errorMessage) {
+            throw new Error(errorMessage + 'not supported');
+        }
+    }
+
+    function fetchData() {
+
+        promise
+            .all([fetcher(globarVars.userApi), fetcher(globarVars.photosApi), fetcher(globarVars.postApi)])
+            .then((data) => handleResponse(data))
+            .catch((error) => {
+                throw new Error(error);
+            });
+
+        function fetcher(api) {
+            return new promise((resolve, reject) =>
+                fetch(globarVars.baseApi + api, globarVars.fetchConfig)
+                    .then((response) => resolve(response.json()))
+                    .catch((error)=> reject(error)));
+        }
+    }
+
+    function handleResponse(data)  {
+
+        let userData, photosData, postsData;
+        [userData, photosData, postsData] = data;
+
+        userData.forEach((data, i) => {
+            data.photos = photosData[i];
+            data.posts = postsData[i];
+        });
+
+        domManipulation(userData);
+    }
+
+    function domManipulation(userData) {
+        const _elementCreator = (key, value) => {
+
+            // TODO: make this a ul
+            const $div = document.createElement('div');
+            const $spanKey = document.createElement('span');
+            const $spanValue = document.createElement('span');
+
+            $spanKey.innerHTML = key + ': ';
+            $spanValue.innerHTML = value;
+
+            $div.appendChild($spanKey);
+            $div.appendChild($spanValue);
+
+            return $div;
+        };
+
+        // Removing loading & displaying data:
+        const $loading = document.getElementsByClassName('loading');
+        if ($loading) ($loading[0].style.display = 'none');
+
+        const $article = document.getElementsByTagName('article');
+        if ($article) ($article[0].style.display = 'block');
+
+        const $fragement = document.createDocumentFragment();
+
+
+        userData.forEach((dataContent) => {
+
+            const $userContentWrapper = document.createElement('div');
+            $userContentWrapper.style.border = '2px solid';
+            $userContentWrapper.style.margin = '20px 0';
+
+            const contentGenerator = (innerData) => {
+                let data = innerData || dataContent;
+
+                for(let item in data) {
+                    !!data.hasOwnProperty(item) &&
+                        typeof data[item] === 'string' ? $userContentWrapper.appendChild(_elementCreator(item, data[item])) :
+                        !!data[item] && typeof data[item] === 'object' ? contentGenerator(data[item]) : null;
+                }
+            };
+            contentGenerator();
+
+            $fragement.appendChild($userContentWrapper);
+        });
+
+        $article[0].appendChild($fragement);
+    }
+</script>
+
+</html>
